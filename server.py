@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.cors import CORSMiddleware
 
@@ -96,8 +98,35 @@ BUGS_BY_VERSION = {
 }
 
 
+class ClientVersionResult(BaseModel):
+    account_name: str
+    product: str
+    version: str
+    environment: str
+    last_updated: str
+    license_tier: str
+    license_expiry: str
+    error: Optional[str] = None
+
+
+class BugItem(BaseModel):
+    id: str
+    title: str
+    severity: str
+    status: str
+    reported_date: str
+    affected_module: str
+
+
+class OpenBugsResult(BaseModel):
+    version: str
+    total_open: int
+    bugs: list[BugItem]
+    message: Optional[str] = None
+
+
 @mcp.tool()
-def get_client_version(account_name: str) -> dict:
+def get_client_version(account_name: str) -> ClientVersionResult:
     """
     Returns the installed product version and license details for a given client account.
     Use this before a support call to know exactly what version the client is running.
@@ -105,24 +134,33 @@ def get_client_version(account_name: str) -> dict:
     key = account_name.strip().lower()
     client = CLIENT_VERSIONS.get(key)
     if not client:
-        return {"error": f"No deployment record found for account '{account_name}'"}
-    return client
+        return ClientVersionResult(
+            account_name=account_name,
+            product="",
+            version="",
+            environment="",
+            last_updated="",
+            license_tier="",
+            license_expiry="",
+            error=f"No deployment record found for account '{account_name}'",
+        )
+    return ClientVersionResult(**client)
 
 
 @mcp.tool()
-def get_open_bugs(version: str) -> dict:
+def get_open_bugs(version: str) -> OpenBugsResult:
     """
     Returns open and in-progress bugs for a given product version.
     Use this to understand known issues before talking to a client on that version.
     """
     bugs = BUGS_BY_VERSION.get(version.strip())
     if bugs is None:
-        return {"version": version, "bugs": [], "message": "No known issues for this version."}
-    return {
-        "version": version,
-        "total_open": len(bugs),
-        "bugs": bugs,
-    }
+        return OpenBugsResult(version=version, total_open=0, bugs=[], message="No known issues for this version.")
+    return OpenBugsResult(
+        version=version,
+        total_open=len(bugs),
+        bugs=[BugItem(**b) for b in bugs],
+    )
 
 
 app = mcp.streamable_http_app()
