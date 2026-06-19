@@ -125,7 +125,7 @@ class OpenBugsResult(BaseModel):
     message: Optional[str] = None
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 def get_client_version(account_name: str) -> ClientVersionResult:
     """
     Returns the installed product version and license details for a given client account.
@@ -147,7 +147,7 @@ def get_client_version(account_name: str) -> ClientVersionResult:
     return ClientVersionResult(**client)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=True)
 def get_open_bugs(version: str) -> OpenBugsResult:
     """
     Returns open and in-progress bugs for a given product version.
