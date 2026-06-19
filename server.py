@@ -3,43 +3,126 @@ from mcp.server.fastmcp import FastMCP
 from starlette.middleware.cors import CORSMiddleware
 
 port = int(os.environ.get("PORT", 8000))
-mcp = FastMCP("Employee Directory", host="0.0.0.0", port=port)
+mcp = FastMCP("Universal Software Support", host="0.0.0.0", port=port)
 
-EMPLOYEES = {
-    "E001": {
-        "name": "Alice Johnson",
-        "age": 32,
-        "phone": "+1-555-0101",
-        "joining_date": "2020-03-15",
-        "employment_type": "Full-time",
-        "office_location_city": "New York",
+# Simulates an internal licensing/deployment system
+CLIENT_VERSIONS = {
+    "acme corp": {
+        "account_name": "Acme Corp",
+        "product": "UniSoft Platform",
+        "version": "4.2.1",
+        "environment": "production",
+        "last_updated": "2026-05-10",
+        "license_tier": "Enterprise",
+        "license_expiry": "2027-03-31",
     },
-    "E002": {
-        "name": "Bob Smith",
-        "age": 45,
-        "phone": "+1-555-0202",
-        "joining_date": "2015-07-01",
-        "employment_type": "Full-time",
-        "office_location_city": "San Francisco",
+    "globex": {
+        "account_name": "Globex",
+        "product": "UniSoft Platform",
+        "version": "4.1.0",
+        "environment": "production",
+        "last_updated": "2026-02-18",
+        "license_tier": "Professional",
+        "license_expiry": "2026-12-31",
     },
-    "E003": {
-        "name": "Carol Davis",
-        "age": 28,
-        "phone": "+1-555-0303",
-        "joining_date": "2023-01-10",
-        "employment_type": "Contract",
-        "office_location_city": "Austin",
+    "initech": {
+        "account_name": "Initech",
+        "product": "UniSoft Platform",
+        "version": "3.9.5",
+        "environment": "staging",
+        "last_updated": "2025-11-02",
+        "license_tier": "Starter",
+        "license_expiry": "2026-09-15",
     },
+    "umbrella corp": {
+        "account_name": "Umbrella Corp",
+        "product": "UniSoft Platform",
+        "version": "4.2.1",
+        "environment": "production",
+        "last_updated": "2026-06-01",
+        "license_tier": "Enterprise",
+        "license_expiry": "2028-01-01",
+    },
+}
+
+# Simulates a GitHub/Jira bug tracker
+BUGS_BY_VERSION = {
+    "4.2.1": [
+        {
+            "id": "BUG-1042",
+            "title": "SSO login fails when session token expires after 8h",
+            "severity": "critical",
+            "status": "open",
+            "reported_date": "2026-06-10",
+            "affected_module": "Authentication",
+        },
+        {
+            "id": "BUG-1055",
+            "title": "Export to CSV truncates rows above 10,000 records",
+            "severity": "high",
+            "status": "in_progress",
+            "reported_date": "2026-06-14",
+            "affected_module": "Data Export",
+        },
+    ],
+    "4.1.0": [
+        {
+            "id": "BUG-987",
+            "title": "Dashboard charts do not render in Safari 17",
+            "severity": "high",
+            "status": "open",
+            "reported_date": "2026-04-22",
+            "affected_module": "Dashboard",
+        },
+        {
+            "id": "BUG-1001",
+            "title": "Webhook retry logic causes duplicate events on timeout",
+            "severity": "critical",
+            "status": "open",
+            "reported_date": "2026-05-03",
+            "affected_module": "Integrations",
+        },
+    ],
+    "3.9.5": [
+        {
+            "id": "BUG-801",
+            "title": "PDF report generation fails for accounts with special characters",
+            "severity": "medium",
+            "status": "open",
+            "reported_date": "2025-10-15",
+            "affected_module": "Reports",
+        },
+    ],
 }
 
 
 @mcp.tool()
-def get_employee(employee_id: str) -> dict:
-    """Get employee details by employee ID."""
-    employee = EMPLOYEES.get(employee_id.upper())
-    if not employee:
-        return {"error": f"No employee found with ID '{employee_id}'"}
-    return employee
+def get_client_version(account_name: str) -> dict:
+    """
+    Returns the installed product version and license details for a given client account.
+    Use this before a support call to know exactly what version the client is running.
+    """
+    key = account_name.strip().lower()
+    client = CLIENT_VERSIONS.get(key)
+    if not client:
+        return {"error": f"No deployment record found for account '{account_name}'"}
+    return client
+
+
+@mcp.tool()
+def get_open_bugs(version: str) -> dict:
+    """
+    Returns open and in-progress bugs for a given product version.
+    Use this to understand known issues before talking to a client on that version.
+    """
+    bugs = BUGS_BY_VERSION.get(version.strip())
+    if bugs is None:
+        return {"version": version, "bugs": [], "message": "No known issues for this version."}
+    return {
+        "version": version,
+        "total_open": len(bugs),
+        "bugs": bugs,
+    }
 
 
 app = mcp.streamable_http_app()
