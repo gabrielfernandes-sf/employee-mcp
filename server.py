@@ -3,6 +3,9 @@ from typing import Optional
 from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 port = int(os.environ.get("PORT", 8000))
 mcp = FastMCP("Universal Software Support", host="0.0.0.0", port=port)
@@ -163,7 +166,27 @@ def get_open_bugs(version: str) -> OpenBugsResult:
     )
 
 
-app = mcp.streamable_http_app()
+async def api_client_version(request: Request):
+    account_name = request.query_params.get("account_name", "")
+    key = account_name.strip().lower()
+    client = CLIENT_VERSIONS.get(key)
+    if not client:
+        return JSONResponse({"error": f"No deployment record found for account '{account_name}'"})
+    return JSONResponse(client)
+
+
+async def api_open_bugs(request: Request):
+    version = request.query_params.get("version", "")
+    bugs = BUGS_BY_VERSION.get(version.strip())
+    if bugs is None:
+        return JSONResponse({"version": version, "total_open": 0, "bugs": [], "message": "No known issues for this version."})
+    return JSONResponse({"version": version, "total_open": len(bugs), "bugs": bugs})
+
+
+app = mcp.streamable_http_app(routes=[
+    Route("/api/client-version", api_client_version),
+    Route("/api/open-bugs", api_open_bugs),
+])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
