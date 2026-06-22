@@ -35,6 +35,37 @@ EMPLOYEES = {
 }
 
 
+class BugItem(BaseModel):
+    id: str
+    title: str
+    severity: str
+    status: str
+    reported_date: str
+    affected_module: str
+
+
+class OpenBugsResult(BaseModel):
+    version: str
+    total_open: int
+    bugs: list[BugItem]
+    message: Optional[str] = None
+
+
+BUGS_BY_VERSION = {
+    "4.2.1": [
+        BugItem(id="BUG-1042", title="SSO login fails when session token expires after 8h", severity="critical", status="open", reported_date="2026-06-10", affected_module="Authentication"),
+        BugItem(id="BUG-1055", title="Export to CSV truncates rows above 10,000 records", severity="high", status="in_progress", reported_date="2026-06-14", affected_module="Data Export"),
+    ],
+    "4.1.0": [
+        BugItem(id="BUG-987", title="Dashboard charts do not render in Safari 17", severity="high", status="open", reported_date="2026-04-22", affected_module="Dashboard"),
+        BugItem(id="BUG-1001", title="Webhook retry logic causes duplicate events on timeout", severity="critical", status="open", reported_date="2026-05-03", affected_module="Integrations"),
+    ],
+    "3.9.5": [
+        BugItem(id="BUG-801", title="PDF report generation fails for accounts with special characters", severity="medium", status="open", reported_date="2025-10-15", affected_module="Reports"),
+    ],
+}
+
+
 class EmployeeResult(BaseModel):
     name: Optional[str] = None
     age: Optional[int] = None
@@ -52,6 +83,15 @@ def get_employee(employee_id: str) -> EmployeeResult:
     if not employee:
         return EmployeeResult(error=f"No employee found with ID '{employee_id}'")
     return EmployeeResult(**employee)
+
+
+@mcp.tool(structured_output=True)
+def get_open_bugs(version: str) -> OpenBugsResult:
+    """Returns open and in-progress bugs for a given product version. Use this to understand known issues before talking to a client on that version."""
+    bugs = BUGS_BY_VERSION.get(version.strip())
+    if bugs is None:
+        return OpenBugsResult(version=version, total_open=0, bugs=[], message="No known issues for this version.")
+    return OpenBugsResult(version=version, total_open=len(bugs), bugs=bugs)
 
 
 app = mcp.streamable_http_app()
