@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.cors import CORSMiddleware
 
@@ -32,13 +34,25 @@ EMPLOYEES = {
     },
 }
 
-@mcp.tool()
-def get_employee(employee_id: str) -> dict:
+
+class EmployeeResult(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    phone: Optional[str] = None
+    joining_date: Optional[str] = None
+    employment_type: Optional[str] = None
+    office_location_city: Optional[str] = None
+    error: Optional[str] = None
+
+
+@mcp.tool(structured_output=True)
+def get_employee(employee_id: str) -> EmployeeResult:
     """Get employee details by employee ID."""
     employee = EMPLOYEES.get(employee_id.upper())
     if not employee:
-        return {"error": f"No employee found with ID '{employee_id}'"}
-    return employee
+        return EmployeeResult(error=f"No employee found with ID '{employee_id}'")
+    return EmployeeResult(**employee)
+
 
 app = mcp.streamable_http_app()
 
